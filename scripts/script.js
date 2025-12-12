@@ -71,26 +71,66 @@ micBtn.addEventListener("click", () => {
 
     recognition.start();
 });
-/* ===== MİKROFON ===== */
-micBtn.addEventListener("click", () => {
-    let recognition = new webkitSpeechRecognition();
+/* ===== GLOBAL MİKROFON ===== */
+let recognition = null;
+let micWorking = false;
+
+function initMic() {
+    if (!('webkitSpeechRecognition' in window)) {
+        alert("Tarayıcın mikrofon desteklemiyor.");
+        return;
+    }
+
+    recognition = new webkitSpeechRecognition();
     recognition.lang = inputLang.value;
     recognition.continuous = false;
+    recognition.interimResults = false;
 
-    // Mikrofon çalışıyor → buton yeşil
-    micBtn.style.background = "#00cc00";
-    micBtn.classList.add("pulse");
+    recognition.onstart = () => {
+        micWorking = true;
+        micBtn.style.background = "#00cc00";
+        micBtn.classList.add("pulse");
+    };
 
     recognition.onresult = (e) => {
         inputText.value = e.results[0][0].transcript;
         translate();
     };
 
-    // Konuşma bittiğinde → griye dön
-    recognition.onend = () => {
+    recognition.onerror = () => {
+        micWorking = false;
         micBtn.style.background = "#333";
         micBtn.classList.remove("pulse");
     };
 
-    recognition.start();
+    recognition.onend = () => {
+        micWorking = false;
+        micBtn.style.background = "#333";
+        micBtn.classList.remove("pulse");
+    };
+}
+
+/* İlk açılışta recognition oluştur */
+initMic();
+
+/* ===== MİK BUTONU ===== */
+micBtn.addEventListener("click", () => {
+    if (!recognition) initMic();
+
+    // Eğer mic zaten aktifse kapat
+    if (micWorking) {
+        recognition.stop();
+        return;
+    }
+
+    // Değişen dile göre yeniden ayarla
+    recognition.lang = inputLang.value;
+
+    try {
+        recognition.start();
+    } catch (e) {
+        // start() açıkken tekrar çağrılırsa hata verir; önce durdur sonra başlat.
+        recognition.stop();
+        recognition.start();
+    }
 });
