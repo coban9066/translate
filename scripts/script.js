@@ -5,24 +5,13 @@ const outputLang = document.getElementById("outputLang");
 const speakBtn = document.getElementById("speakBtn");
 const micBtn = document.getElementById("micBtn");
 
-let speakerActive = false; // Başlangıç: kapalı
+let speakerActive = false;
 speakBtn.style.background = "#b30000"; 
-speakBtn.classList.add("pulse");
+let recognition = null;
+let micActive = false;
+let shouldTranslateOnEnd = false; // <-- ÇEVİRİ TETİKLEME KONTROLÜ
 
-/* ===== HOPARLÖR AÇ/KAPA ===== */
-speakBtn.addEventListener("click", () => {
-    speakerActive = !speakerActive;
-
-    if (speakerActive) {
-        speakBtn.style.background = "#333";     // aktif: gri
-        speakBtn.classList.remove("pulse");     // animasyon dur
-    } else {
-        speakBtn.style.background = "#b30000";  // pasif: kırmızı
-        speakBtn.classList.add("pulse");        // animasyon başla
-    }
-});
-
-/* ===== METNİ SESLENDİR ===== */
+// ---------------- SESLENDİRME ----------------
 function speakText() {
     let lang = outputLang.value;
 
@@ -36,7 +25,7 @@ function speakText() {
     speechSynthesis.speak(utter);
 }
 
-/* ===== ÇEVİRİ ===== */
+// ---------------- ÇEVİRİ ----------------
 async function translate() {
     if (!inputText.value.trim()) return;
 
@@ -49,95 +38,90 @@ async function translate() {
     const data = await res.json();
     outputText.value = data.responseData.translatedText;
 
-    // hoparlör açık ise otomatik seslendir
-    if (speakerActive && outputText.value.trim() !== "") {
+    if (speakerActive && outputText.value.trim()) {
         speakText();
     }
 }
 
-inputText.addEventListener("input", translate);
-inputLang.addEventListener("change", translate);
-outputLang.addEventListener("change", translate);
-
-/* ===== MİKROFON ===== */
-micBtn.addEventListener("click", () => {
-    let recognition = new webkitSpeechRecognition();
-    recognition.lang = inputLang.value;
-
-    recognition.onresult = (e) => {
-        inputText.value = e.results[0][0].transcript;
-        translate();
-    };
-
-    recognition.start();
-});
-/* ===== GLOBAL MİKROFON ===== */
-let recognition = null;
-let micWorking = false;
-
-function initMic() {
-    if (!('webkitSpeechRecognition' in window)) {
-        alert("Tarayıcın mikrofon desteklemiyor.");
+function setupMic() {
+    if (!("webkitSpeechRecognition" in window)) {
+        alert("Tarayıcı mikrofon desteklemiyor.");
         return;
     }
 
     recognition = new webkitSpeechRecognition();
-    recognition.lang = inputLang.value;
     recognition.continuous = false;
     recognition.interimResults = false;
-
-    recognition.onstart = () => {
-        micWorking = true;
-        micBtn.style.background = "#00cc00";
-        micBtn.classList.add("pulse");
-    };
-
-    recognition.onresult = (e) => {
-        inputText.value = e.results[0][0].transcript;
-        translate();
-    };
-
-    recognition.onerror = () => {
-        micWorking = false;
-        micBtn.style.background = "#333";
-        micBtn.classList.remove("pulse");
-    };
-
-    recognition.onend = () => {
-        micWorking = false;
-        micBtn.style.background = "#333";
-        micBtn.classList.remove("pulse");
-    };
 }
 
-/* İlk açılışta recognition oluştur */
-initMic();
+setupMic();
 
-/* ===== MİK BUTONU ===== */
+// ---------------- MİKROFON BUTONU ----------------
 micBtn.addEventListener("click", () => {
-    if (!recognition) initMic();
+    if (!recognition) setupMic();
 
-    // Eğer mic zaten aktifse kapat
-    if (micWorking) {
-        recognition.stop();
-        return;
-    }
+    if (!micActive) {
+        // Yeni dinleme → metinleri temizle
+        inputText.value = "";
+        outputText.value = "";
 
-    // Değişen dile göre yeniden ayarla
-    recognition.lang = inputLang.value;
+        micActive = true;
+        shouldTranslateOnEnd = true; // <-- butonla kapatılsa bile çevir
 
-    try {
-        recognition.start();
-    } catch (e) {
-        // start() açıkken tekrar çağrılırsa hata verir; önce durdur sonra başlat.
-        recognition.stop();
-        recognition.start();
-    }
+        micBtn.classList.add("pulse");
+        micBtn.style.background = "#00cc00";
 
-    // Mikrofonu otomatik olarak kapatmak için bir zamanlayıcı ekleyin
-    setTimeout(() => {
-        if (micWorking) {
+        recognition.lang = inputLang.value;
+
+        try {
+            recognition.start();
+        } catch (_) {
             recognition.stop();
+            recognition.start();
         }
-    }, 5000); // 30 saniye sonra mikrofonu kapat
+    } else {
+        // Elle kapattın
+        shouldTranslateOnEnd = true;
+        micActive = false;
+        recognition.stop();
+    }
+});
+
+// ---------------- SONUÇ ----------------
+recognition.onresult = (e) => {
+    inputText.value = e.results[0][0].transcript;
+};
+
+// ---------------- MİK KAPANDIĞINDA ----------------
+recognition.onend = () => {
+    micActive = false;
+    micBtn.classList.remove("pulse");
+    micBtn.style.background = "#333";
+
+    if (shouldTranslateOnEnd && inputText.value.trim() !== "") {
+        translate();
+    }
+
+    shouldTranslateOnEnd = false; // tekrar tetiklememesi için sıfırla
+};
+
+// ---------------- HATA ----------------
+recognition.onerror = () => {
+    micActive = false;
+    micBtn.classList.remove("pulse");
+    micBtn.style.background = "#333";
+    setupMic();
+};
+
+// ---------------- SES AÇ KAPA ----------------
+speakBtn.addEventListener("click", () => {
+    speakerActive = !speakerActive;
+
+    if (speakerActive) {
+        speakBtn.style.background = "#333";
+        speakBtn.classList.remove("pulse");
+    } else {
+        speakBtn.style.background = "#b30000";
+        speakBtn.classList.add("pulse");
+    }
 });
