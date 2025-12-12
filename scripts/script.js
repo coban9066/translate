@@ -133,4 +133,11 @@ micBtn.addEventListener("click", () => {
         recognition.stop();
         recognition.start();
     }
+
+    // Mikrofonu otomatik olarak kapatmak için bir zamanlayıcı ekleyin
+    setTimeout(() => {
+        if (micWorking) {
+            recognition.stop();
+        }
+    }, 5000); // 30 saniye sonra mikrofonu kapat
 });
