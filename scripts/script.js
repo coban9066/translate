@@ -7,9 +7,9 @@ const micBtn = document.getElementById("micBtn");
 
 let speakerActive = false;
 speakBtn.style.background = "#b30000"; 
+
 let recognition = null;
 let micActive = false;
-let shouldTranslateOnEnd = false; // <-- ÇEVİRİ TETİKLEME KONTROLÜ
 
 // ---------------- SESLENDİRME ----------------
 function speakText() {
@@ -43,6 +43,7 @@ async function translate() {
     }
 }
 
+// ---------------- MİKROFON ----------------
 function setupMic() {
     if (!("webkitSpeechRecognition" in window)) {
         alert("Tarayıcı mikrofon desteklemiyor.");
@@ -56,17 +57,14 @@ function setupMic() {
 
 setupMic();
 
-// ---------------- MİKROFON BUTONU ----------------
 micBtn.addEventListener("click", () => {
     if (!recognition) setupMic();
 
     if (!micActive) {
-        // Yeni dinleme → metinleri temizle
-        inputText.value = "";
+        inputText.value = ""; // temizle
         outputText.value = "";
 
         micActive = true;
-        shouldTranslateOnEnd = true; // <-- butonla kapatılsa bile çevir
 
         micBtn.classList.add("pulse");
         micBtn.style.background = "#00cc00";
@@ -80,29 +78,27 @@ micBtn.addEventListener("click", () => {
             recognition.start();
         }
     } else {
-        // Elle kapattın
-        shouldTranslateOnEnd = true;
         micActive = false;
         recognition.stop();
     }
 });
 
-// ---------------- SONUÇ ----------------
+// ---------------- MİK RESULT ----------------
 recognition.onresult = (e) => {
+    // SADECE inputText'e yaz → çeviriyi otomatik tetiklemiyoruz
     inputText.value = e.results[0][0].transcript;
 };
 
-// ---------------- MİK KAPANDIĞINDA ----------------
+// ---------------- MİK KAPANDI ----------------
 recognition.onend = () => {
     micActive = false;
     micBtn.classList.remove("pulse");
     micBtn.style.background = "#333";
 
-    if (shouldTranslateOnEnd && inputText.value.trim() !== "") {
+    // mikrofondan gelen yazı → textbox'a yazıldı → çeviri buradan çalışır
+    if (inputText.value.trim()) {
         translate();
     }
-
-    shouldTranslateOnEnd = false; // tekrar tetiklememesi için sıfırla
 };
 
 // ---------------- HATA ----------------
@@ -113,15 +109,18 @@ recognition.onerror = () => {
     setupMic();
 };
 
-// ---------------- SES AÇ KAPA ----------------
+// ---------------- YAZI YAZILDIĞINDA OTOMATİK ÇEVİR ----------------
+let typingTimer;
+inputText.addEventListener("input", () => {
+    clearTimeout(typingTimer);
+    typingTimer = setTimeout(() => {
+        if (inputText.value.trim()) translate();
+    }, 500);
+});
+
+// ---------------- SES AÇ KAPAT ----------------
 speakBtn.addEventListener("click", () => {
     speakerActive = !speakerActive;
 
-    if (speakerActive) {
-        speakBtn.style.background = "#333";
-        speakBtn.classList.remove("pulse");
-    } else {
-        speakBtn.style.background = "#b30000";
-        speakBtn.classList.add("pulse");
-    }
+    speakBtn.style.background = speakerActive ? "#333" : "#b30000";
 });
