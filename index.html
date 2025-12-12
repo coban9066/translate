@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evrensel Anlık Çeviri </title>
+    <link rel="stylesheet" href="./source/style.css">
+    <link rel="icon" type="image/svg+xml" href="./ico/bookmark-heart.svg" />
+
+</head>
+<body>
+
+    <div class="container">
+        <h1 class="title">Evrensel Anlık Çeviri </h1>
+
+        <!-- Yazı Dili -->
+        <div class="block">
+            <label>Yazı Dili:</label>
+            <select id="inputLang" class="select-box">
+                <option value="tr">Türkçe</option>
+                <option value="en">İngilizce</option>
+                <option value="ar">Arapça</option>
+                <option value="de">Almanca</option>
+                <option value="fr">Fransızca</option>
+            </select>
+
+            <div class="textarea-wrapper">
+                <textarea id="inputText" placeholder="Yaz veya mikrofona konuş..."></textarea>
+                <button id="micBtn" class="icon-btn">🎤</button>
+            </div>
+        </div>
+
+        <!-- Çeviri -->
+        <div class="block">
+            <label>Çeviri Dili:</label>
+            <select id="outputLang" class="select-box">
+                <option value="en">İngilizce</option>
+                <option value="tr">Türkçe</option>
+                <option value="ar">Arapça</option>
+                <option value="fr">Fransızca</option>
+                <option value="de">Almanca</option>
+            </select>
+
+            <div class="textarea-wrapper">
+                <textarea id="outputText" readonly></textarea>
+                <button id="speakBtn" class="icon-btn">🔊</button>
+            </div>
+        </div>
+    </div>
+
+    <footer>Mehmet Çoban tarafından geliştirildi.</footer>
+
+    <script src="./scripts/script.js"></script>
+</body>
+</html>
